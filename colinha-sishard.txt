@@ -1,0 +1,268 @@
+PROCESSOS
+---------
+
+=Imports=
+#include <sys/types.h>
+#include <unistd.h>
+#include <stdio.h>
+#include <stdlib.h>
+
+Como usar:
+
+pid_t filho = fork();
+
+# Cria um novo processo filho
+
+execvp({caminho do arquivo}, {argumentos});
+
+# Executa programa a partir de seu caminho, se
+# precis passar parâmetros pela linha de comando
+# para esse programa, usa os argumentos.
+
+ENTRADA-SAIDA
+-------------
+
+=Imports=
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <unistd.h>
+#include <stdio.h>
+#include <stdlib.h>
+
+Como usar:
+
+int fd = open({caminho ou nome do arquivo}, O_RDONLY);
+
+# Ler arquivo apenas
+
+int fd = open({caminho ou nome do arquivo}, O_WRONLY, 0700);
+
+# Escrever em um arquivo apenas
+
+int fd = open({caminho ou nome do arquivo}, O_WRONLY | O_CREAT, 0700);
+
+# Escrever em um arquivo se ele existir, se não, cria e
+# escreve.
+
+read(fd, buffer, 10);
+
+# Ler 10 bytes de um arquivo salvando em um buffer
+
+write(fd, buffer, 10);
+
+# Escrever 10 bytes do buffer em um arquivo
+
+close(fd);
+
+# Fechar arquivo no final do código
+
+SINAIS
+------
+
+=Imports=
+#include <unistd.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <sys/types.h>
+#include <sys/wait.h>
+#include <string.h>
+#include <signal.h>
+
+Como usar:
+
+int status;
+wait(&status);
+
+# Pega status quando filho termina de executar
+
+WIFEXITED(status)
+WIFSIGNALED(status)
+WTERMSIG(status)
+
+# Macros para saber informações sobre o status
+# WIFEXITED - Saber se terminou normalmente ou não
+# WEXITSTATUS - Se WIFEXITED > 0, mostra qual foi o código passado para
+# a função exit() no filho
+# WIFSIGNALED - Se filho terminou por causa de sinal, retorna 1, se 
+# não, retorna 0
+# WTERMSIG - Se WIFSIGNALED > 0, mostra qual foi o sinal que matou o
+# filho
+
+kill({pid do filho}, {sinal que deseja matar o filho});
+
+# Função que mata um processo a partir de seu pid e um sinal
+#
+# Sinais mais comuns:
+# SIGINT Ctrl + C
+# SIGTERM Ctrl + Z
+# SIGKILL 
+
+strsignal({status});
+
+# Função que retorna uma descrição sobre o status recebido
+# Exemplo de como usar:
+# printf("%s\n", strsignal(WIFEXITED(status)))
+# 
+# Lembre que o status é o que pegamos da função wait()
+
+struct sigaction s;
+s.sa_handler = {nome da função handler};
+sigemptyset(&s.sa_mask);
+s.sa_flags = 0;
+sigaction({sinal que deseja ativar o handler}, &s, NULL);
+
+# Struct obrigatória para receber e tratar sinais no código.
+# Lista de sinais possíveis para colocar no sigaction():
+# - SIGINT (a maioria das vezes)
+# - SIGTERM
+# - SIGKILL
+
+void sig_handler() {
+    printf("Chamou Ctrl+C\n");
+}
+
+# Exemplo de função handler, sempre colocar acima da função main()
+
+THREADS E MUTEX
+---------------
+
+=Imports=
+#include <pthread.h>
+#include <stdio.h>
+#include <stdlib.h>
+
+Como usar:
+
+pthread_t tid;
+
+# Cria variável para guardar o id da thread (para 1 thread)
+
+pthread_t tids[x];
+
+!!! OBS - Só usar esse caso quando todas as threads USAM a mesma função
+# Cria uma lista para guardar os ids das threads (para mais de uma thread)
+
+pthread_t tid1;
+pthread_t tid2;
+pthread_t tid3;
+pthread_t tidx;
+
+!!! OBS - Usar esse caso quando as threads NÃO USAM a mesma função
+# Cria variáveis para guardar os ids de x threads
+
+pthread_create(&tid (referência do id da thread), NULL, {nome da função da thread}, {argumentos que deseja passar para a thread, se não tiver, é NULL});
+
+# Cria uma thread apenas
+
+pthread_t tids[4];
+for (int i = 0; i < 4; i++) {
+    pthread_create(&tids[i], NULL, {nome da função da thread}, {argumentos ou NULL});
+}
+
+# Cria x threads onde todas USAM A MESMA função
+
+pthread_join(tid1, NULL);
+pthread_join(tid2, NULL);
+pthread_join(tid3, NULL);
+pthread_join(tidx, NULL);
+
+!!! OBS - Esse caso serve para quando as threads NÃO USAM A MESMA função
+# Join de x threads usando os tids;
+
+for (int i = 0; i < 4; i++) {
+    pthread_join(tids[i], NULL);
+}
+
+!!! OBS - Esse caso só serve para quando todas as threads USAM A MESMA função
+# Join de x threads usando o tid;
+
+
+
+void *thread1(void *arg) {
+    printf("Hello thread 1!\n");
+    return NULL;
+}
+
+# Exemplo da função de uma thread
+
+pthread_mutex_t mutex;
+
+# Cria um mutex ainda vazio (provavelmente tem que ser global)
+
+pthread_mutex_init(&mutex (referência da variável criada anteriormente), NULL);
+
+# Inicializa o mutex para poder usar
+
+pthread_mutex_destroy(&mutex);
+
+# Destruir o mutex ao final do código da main (IMPORTANTE)
+
+if (&mutex != NULL) pthread_mutex_lock(&mutex);
+{usa alguma variável global aqui ou printf}
+if (&mutex != NULL) pthread_mutex_unlock(&mutex);
+
+!!! OBS - É sempre bom usar mutex para printf também!
+# Usando o mutex para travar e destravar (lock e unlock) um thread ao usar variável global
+
+SEMÁFORO
+--------
+
+=Imports=
+#include <stdio.h>
+#include <stdlib.h>
+#include <semaphore.h>
+
+Como usar:
+
+sem_t sem;
+
+# Cria um semáforo (provavelmente tem que ser global)
+
+sem_init(&sem (referência do semáforo), 0, {valor que deseja iniciar ele, normalmente 0});
+
+# Inicializa um semáforo para poder ser usado
+
+sem_destroy(&sem);
+
+# Destruir o semáforo ao final do código da main (IMPORTANTE)
+
+sem_post(&sem);
+
+# POST: Adiciona 1 no valor do semáforo, sim, só isso, pense em como usar ao seu favor
+
+sem_wait(&sem);
+
+# WAIT: Diminui 1 do valor do semáforo SE FOR MAIOR QUE 0, se não, fica aguardando o valor do semáforo ser maior que 0.
+
+DICAS
+-----
+
+Se o Maciel pedir para que você pegue argumentos passados pelo terminam SEM ALGUMA ORDEM APARENTE, o código fica assim:
+
+#include <string.h>
+
+int param1;
+int param2;
+char *param3;
+
+for (int i = 0; i < argc; i++) {
+
+    if (strcmp(argv[i], "-k") == 0) { # Cuidado, não vai ser sempre -k, só estou usando como exemplo
+        param1 = atol(argv[i+1]); # Perceba que lá em cima nas variáveis, o param1 e param2 são ints, por isso usamos atol
+    }
+    
+    if (strcmp(argv[i], "-p") == 0) { # De novo, -p é só um exemplo
+	param2 = atol(argv[i+1]); # Perceba que lá em cima nas variáveis, o param1 e param2 são ints, por isso usamos atol
+    }
+    
+    if (strcmp(argv[i], "-t") == 0) { # De novo, -t é só um exemplo
+    	param3 = argv[i+1];
+    }
+}
+
+
+
+
+
+
